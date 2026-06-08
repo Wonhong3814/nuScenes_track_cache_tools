@@ -1,4 +1,5 @@
 numpy
+matplotlib
 pyquaternion
 PyYAML
 tqdm

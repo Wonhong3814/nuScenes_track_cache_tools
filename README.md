@@ -130,6 +130,16 @@ python3 convert_official_results.py \
   --output_dir /data1/wonhong/nuScenes_track_cache
 ```
 
+Visualize tracker results over LiDAR points:
+
+```bash
+python3 visualize_tracker_results.py \
+  --nuscenes_root /data1/nuScenes \
+  --version v1.0-trainval \
+  --tracker_result_json /data1/wonhong/nuScenes_track_cache/mctrack_results/nuscenes/YYYYMMDD_HHMMSS/results.json \
+  --output_dir /data1/wonhong/nuScenes_track_cache/visualizations/tracker
+```
+
 Run only the first 100 frames of `scene-0240`:
 
 ```bash
@@ -139,6 +149,16 @@ python3 run_mctrack_single_scene.py \
   --scene_id scene-0240 \
   --output_dir /data1/wonhong/nuScenes_track_cache/mctrack_results_scene0240_100frames \
   --max_frames 100
+```
+
+Visualize that 100-frame result:
+
+```bash
+python3 visualize_tracker_results.py \
+  --nuscenes_root /data1/nuScenes \
+  --version v1.0-trainval \
+  --tracker_result_json /data1/wonhong/nuScenes_track_cache/mctrack_results_scene0240_100frames/results.json \
+  --output_dir /data1/wonhong/nuScenes_track_cache/visualizations/scene0240_100frames
 ```
 
 ## Important MCTrack Config Values
