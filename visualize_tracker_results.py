@@ -59,7 +59,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--line_width", type=float, default=1.4)
     parser.add_argument("--no_points", action="store_true", help="Draw boxes only.")
     parser.add_argument("--no_labels", action="store_true", help="Do not draw track labels.")
-    parser.add_argument("--no_sample_gt", action="store_true", help="Do not overlay keyframe GT from each frame's sample_token.")
+    parser.add_argument("--no_sample_gt", action="store_true", help="Do not overlay sample GT on keyframe LIDAR frames.")
     parser.add_argument("--make_3d_html", action="store_true", help="Also write per-frame interactive 3D Plotly HTML.")
     parser.add_argument("--max_3d_frames", type=int, default=None, help="Optional cap for 3D HTML frames after frame filtering.")
     parser.add_argument("--max_3d_points", type=int, default=50000)
@@ -329,7 +329,7 @@ def select_gt_for_frame(
     exact = exact_gt_by_scene.get(scene_id, {}).get(frame_id, [])
     if exact:
         return exact, "exact_frame_gt"
-    if use_sample_gt:
+    if use_sample_gt and meta.get("is_key_frame", False):
         sample_gt = sample_gt_by_sample.get(meta["sample_token"], [])
         if sample_gt:
             return sample_gt, "sample_keyframe_gt"
@@ -441,6 +441,7 @@ def draw_bev_frame(
         "frame_id": frame_id,
         "timestamp": meta["timestamp"],
         "filename": meta["filename"],
+        "is_key_frame": bool(meta.get("is_key_frame", False)),
         "num_points": int(points.shape[0]),
         "num_tracks": int(len(tracks)),
         "num_gt": int(len(gt_items)),
@@ -763,6 +764,7 @@ def main() -> None:
                     "frame_id",
                     "timestamp",
                     "filename",
+                    "is_key_frame",
                     "num_points",
                     "num_tracks",
                     "num_gt",
