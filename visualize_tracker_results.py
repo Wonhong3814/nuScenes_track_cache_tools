@@ -62,7 +62,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--no_sample_gt", action="store_true", help="Do not overlay sample GT on keyframe LIDAR frames.")
     parser.add_argument("--make_3d_html", action="store_true", help="Also write per-frame interactive 3D Plotly HTML.")
     parser.add_argument("--max_3d_frames", type=int, default=None, help="Optional cap for 3D HTML frames after frame filtering.")
-    parser.add_argument("--max_3d_points", type=int, default=50000)
+    parser.add_argument(
+        "--max_3d_points",
+        type=int,
+        default=None,
+        help="Optional cap for 3D point rendering. Default: render all points.",
+    )
     parser.add_argument("--plotlyjs", choices=["inline", "cdn"], default="inline")
     return parser.parse_args()
 
@@ -450,7 +455,9 @@ def draw_bev_frame(
     }
 
 
-def _subsample_points(points: np.ndarray, max_points: int) -> np.ndarray:
+def _subsample_points(points: np.ndarray, max_points: int | None) -> np.ndarray:
+    if max_points is None:
+        return points
     if points.shape[0] <= max_points:
         return points
     idx = np.linspace(0, points.shape[0] - 1, num=max_points, dtype=np.int64)
@@ -488,7 +495,7 @@ def write_3d_frame_html(
     tracks: list[dict[str, Any]],
     gt_items: list[dict[str, Any]],
     output_path: Path,
-    max_points: int,
+    max_points: int | None,
     draw_points: bool,
     draw_labels: bool,
     plotlyjs: str,
