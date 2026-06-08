@@ -27,6 +27,12 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Run only the first N frames of the selected scene. Default: all frames.",
     )
+    parser.add_argument(
+        "--frame_stride",
+        type=int,
+        default=1,
+        help="Keep every Nth detector frame before tracking. Use 2 for 0.05s sweep detections -> 0.1s tracker input.",
+    )
     return parser.parse_args()
 
 
@@ -72,6 +78,24 @@ def extract_scene_array(base_json: Path, scene_id: str) -> list[dict]:
             return json.loads(mm[start:end])
 
 
+def select_and_reindex_frames(scene_data_full: list[dict], frame_stride: int, max_frames: int | None) -> list[dict]:
+    if frame_stride <= 0:
+        raise ValueError(f"--frame_stride must be positive, got {frame_stride}")
+    if max_frames is not None and max_frames <= 0:
+        raise ValueError(f"--max_frames must be positive, got {max_frames}")
+
+    selected = scene_data_full[::frame_stride]
+    if max_frames is not None:
+        selected = selected[:max_frames]
+
+    reindexed: list[dict] = []
+    for new_frame_id, frame in enumerate(selected):
+        item = dict(frame)
+        item["frame_id"] = new_frame_id
+        reindexed.append(item)
+    return reindexed
+
+
 def main() -> None:
     args = parse_args()
     mctrack_root = Path(args.mctrack_root).resolve()
@@ -91,11 +115,11 @@ def main() -> None:
     cfg["SAVE_PATH"] = str(output_dir)
 
     scene_data_full = extract_scene_array(base_json, args.scene_id)
-    scene_data = scene_data_full
-    if args.max_frames is not None:
-        if args.max_frames <= 0:
-            raise ValueError(f"--max_frames must be positive, got {args.max_frames}")
-        scene_data = scene_data_full[: args.max_frames]
+    scene_data = select_and_reindex_frames(
+        scene_data_full=scene_data_full,
+        frame_stride=args.frame_stride,
+        max_frames=args.max_frames,
+    )
 
     scenes_data = {args.scene_id: scene_data}
     tracking_results: dict = {}
@@ -109,6 +133,9 @@ def main() -> None:
         "num_frames": len(scene_data),
         "num_frames_full_scene": len(scene_data_full),
         "max_frames": args.max_frames,
+        "frame_stride": args.frame_stride,
+        "frame_ids_reindexed": True,
+        "effective_tracker_frame_interval_sec": 1.0 / float(cfg["FRAME_RATE"]),
         "base_json": str(base_json),
         "created_at": datetime.now().isoformat(timespec="seconds"),
         "note": "MCTrack tracking is CPU/numpy based; CUDA_VISIBLE_DEVICES does not move this tracker to GPU.",

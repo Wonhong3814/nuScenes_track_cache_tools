@@ -140,25 +140,31 @@ python3 visualize_tracker_results.py \
   --output_dir /data1/wonhong/nuScenes_track_cache/visualizations/tracker
 ```
 
-Run only the first 100 frames of `scene-0240`:
+Run the first 30 `scene-0240` frames at an effective 0.1 sec interval.
+This keeps detector frames `f0, f2, f4, ...` and reindexes them to
+`0, 1, 2, ...` before passing them into MCTrack:
 
 ```bash
 python3 run_mctrack_single_scene.py \
   --mctrack_root third_party/MCTrack \
   --base_json third_party/MCTrack/data/base_version/nuscenes/largekernel/sweep_trainval.json \
   --scene_id scene-0240 \
-  --output_dir /data1/wonhong/nuScenes_track_cache/mctrack_results_scene0240_100frames \
-  --max_frames 100
+  --output_dir /data1/wonhong/nuScenes_track_cache/mctrack_results_scene0240_30frames_stride2 \
+  --frame_stride 2 \
+  --max_frames 30
 ```
 
-Visualize that 100-frame result:
+Visualize that 30-frame stride-2 result with 3D HTML and keyframe GT overlay:
 
 ```bash
 python3 visualize_tracker_results.py \
   --nuscenes_root /data1/nuScenes \
   --version v1.0-trainval \
-  --tracker_result_json /data1/wonhong/nuScenes_track_cache/mctrack_results_scene0240_100frames/results.json \
-  --output_dir /data1/wonhong/nuScenes_track_cache/visualizations/scene0240_100frames
+  --tracker_result_json /data1/wonhong/nuScenes_track_cache/mctrack_results_scene0240_30frames_stride2/results.json \
+  --output_dir /data1/wonhong/nuScenes_track_cache/visualizations/scene0240_30frames_stride2_3d_gt \
+  --max_frames 30 \
+  --make_3d_html \
+  --plotlyjs inline
 ```
 
 ## Important MCTrack Config Values
