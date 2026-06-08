@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+
+# Local environments
+.venv/
+venv/
+env/
+
+# Generated detector/tracker/cache artifacts
+*.pkl
+*.pickle
+*.pth
+*.pt
+*.jsonl
+*.log
+outputs/
+work_dirs/
+nuScenes_track_cache/
+largekernel3d_sweep_trainval*/
+mctrack_results*/
+sweep_infos/
+
+# Large local data/checkpoints should stay outside git.
+data/
+checkpoints/
+third_party/
+
+# Editor/system files
+.DS_Store
+*.swp
+*.swo
+

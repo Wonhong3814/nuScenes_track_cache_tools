@@ -1,0 +1,9 @@
+numpy
+pyquaternion
+PyYAML
+tqdm
+nuscenes-devkit
+terminaltables
+torch
+torchvision
+
