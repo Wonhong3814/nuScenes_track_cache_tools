@@ -27,10 +27,8 @@ sweep_infos/
 # Large local data/checkpoints should stay outside git.
 data/
 checkpoints/
-third_party/
 
 # Editor/system files
 .DS_Store
 *.swp
 *.swo
-

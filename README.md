@@ -1,17 +1,14 @@
 # nuScenes Sweep Detector-Tracker Pipeline
 
-Standalone wrappers for the nuScenes sweep-anchor LargeKernel3D -> MCTrack pipeline.
+Reproducible nuScenes sweep-anchor LargeKernel3D -> MCTrack pipeline.
 
-This repo does not vendor or modify LargeKernel3D, FocalsConv/CenterPoint, MCTrack, checkpoints, or nuScenes data. It only keeps the wrapper scripts, converters, and exact run commands needed to reproduce the detector-tracker cache export.
+This repository tracks the wrapper/converter code and includes the upstream detector/tracker repositories as git submodules:
 
-## External Paths Used Locally
+- `third_party/LargeKernel3D`
+- `third_party/FocalsConv`
+- `third_party/MCTrack`
 
-- nuScenes root: `/data1/nuScenes`
-- LargeKernel3D repo: `/data1/wonhong/third_party/LargeKernel3D`
-- FocalsConv/CenterPoint repo: `/data1/wonhong/third_party/FocalsConv/CenterPoint`
-- MCTrack repo: `/data1/wonhong/third_party/MCTrack`
-- LargeKernel3D checkpoint: `/data1/wonhong/checkpoints/largekernel3d/largekernel3d_tiny_val.pth`
-- Output root: `/data1/wonhong/nuScenes_track_cache`
+It does not store nuScenes data, generated detector/tracker caches, or model checkpoint binaries in git.
 
 ## Current Pipeline Semantics
 
@@ -26,14 +23,63 @@ This repo does not vendor or modify LargeKernel3D, FocalsConv/CenterPoint, MCTra
 - GT cache frame id: keyframe LIDAR_TOP `sample_data_token`
 - MCTrack tracking core is CPU/numpy/lap/cv2 based. `CUDA_VISIBLE_DEVICES` affects detector inference, not the original MCTrack association logic.
 
-## Full Commands
+## Clone
+
+```bash
+git clone --recursive <THIS_REPO_URL>
+cd nuScenes_track_cache_tools
+```
+
+If the repo was cloned without `--recursive`:
+
+```bash
+git submodule update --init --recursive
+```
+
+Install Python dependencies in the environment that will run CenterPoint/MCTrack:
+
+```bash
+python3 -m pip install -r requirements.txt
+```
+
+Download the LargeKernel3D tiny checkpoint:
+
+```bash
+python3 scripts/download_checkpoints.py \
+  --checkpoint_dir checkpoints/largekernel3d
+```
+
+Prepare third-party compatibility patches and MCTrack config:
+
+```bash
+python3 scripts/bootstrap_third_party.py \
+  --nuscenes_root /data1/nuScenes \
+  --output_root /data1/wonhong/nuScenes_track_cache \
+  --split sweep_trainval \
+  --frame_rate 10
+```
+
+## One-Command Full Run
+
+This runs sweep info creation, GPU detector inference, MCTrack input conversion, MCTrack tracking, and final cache conversion:
+
+```bash
+python3 scripts/run_full_sweep_pipeline.py \
+  --nuscenes_root /data1/nuScenes \
+  --output_root /data1/wonhong/nuScenes_track_cache \
+  --checkpoint checkpoints/largekernel3d/largekernel3d_tiny_val.pth \
+  --gpu 9 \
+  --mctrack_processes 8
+```
+
+## Step-By-Step Commands
 
 Create sweep-anchor CenterPoint infos:
 
 ```bash
-cd /data1/wonhong
+cd nuScenes_track_cache_tools
 
-python3 /data1/wonhong/nuScenes_track_cache_tools/create_nuscenes_sweep_infos.py \
+python3 create_nuscenes_sweep_infos.py \
   --nuscenes_root /data1/nuScenes \
   --version v1.0-trainval \
   --output /data1/wonhong/nuScenes_track_cache/sweep_infos/infos_sweep_trainval_1sweep.pkl
@@ -42,10 +88,10 @@ python3 /data1/wonhong/nuScenes_track_cache_tools/create_nuscenes_sweep_infos.py
 Run LargeKernel3D detector on GPU 9:
 
 ```bash
-CUDA_VISIBLE_DEVICES=9 python3 /data1/wonhong/nuScenes_track_cache_tools/run_largekernel3d_sweep_infer.py \
-  --centerpoint_root /data1/wonhong/third_party/FocalsConv/CenterPoint \
-  --config /data1/wonhong/third_party/LargeKernel3D/object-detection/configs/nusc/voxelnet/nusc_centerpoint_voxelnet_0075voxel_fix_bn_z_largekernel3d_tiny.py \
-  --checkpoint /data1/wonhong/checkpoints/largekernel3d/largekernel3d_tiny_val.pth \
+CUDA_VISIBLE_DEVICES=9 python3 run_largekernel3d_sweep_infer.py \
+  --centerpoint_root third_party/FocalsConv/CenterPoint \
+  --config third_party/LargeKernel3D/object-detection/configs/nusc/voxelnet/nusc_centerpoint_voxelnet_0075voxel_fix_bn_z_largekernel3d_tiny.py \
+  --checkpoint checkpoints/largekernel3d/largekernel3d_tiny_val.pth \
   --nuscenes_root /data1/nuScenes \
   --version v1.0-trainval \
   --sweep_info_pkl /data1/wonhong/nuScenes_track_cache/sweep_infos/infos_sweep_trainval_1sweep.pkl \
@@ -55,11 +101,11 @@ CUDA_VISIBLE_DEVICES=9 python3 /data1/wonhong/nuScenes_track_cache_tools/run_lar
 Convert detector JSON into MCTrack base-version input:
 
 ```bash
-python3 /data1/wonhong/nuScenes_track_cache_tools/convert_sweep_detections_to_mctrack_base.py \
+python3 convert_sweep_detections_to_mctrack_base.py \
   --nuscenes_root /data1/nuScenes \
   --version v1.0-trainval \
   --det_json /data1/wonhong/nuScenes_track_cache/largekernel3d_sweep_trainval_1sweep/sweep_detections.json \
-  --save_path /data1/wonhong/third_party/MCTrack/data/base_version/nuscenes \
+  --save_path third_party/MCTrack/data/base_version/nuscenes \
   --detector largekernel \
   --split sweep_trainval
 ```
@@ -67,15 +113,17 @@ python3 /data1/wonhong/nuScenes_track_cache_tools/convert_sweep_detections_to_mc
 Run MCTrack. This is CPU tracking; use `-p` for scene-level multiprocessing:
 
 ```bash
-cd /data1/wonhong/third_party/MCTrack
+cd third_party/MCTrack
 
 python3 main.py --dataset nuscenes -p 8
+
+cd ../..
 ```
 
 Convert MCTrack results to the requested flat caches:
 
 ```bash
-python3 /data1/wonhong/nuScenes_track_cache_tools/convert_official_results.py \
+python3 convert_official_results.py \
   --nuscenes_root /data1/nuScenes \
   --version v1.0-trainval \
   --mctrack_result_json /data1/wonhong/nuScenes_track_cache/mctrack_results/nuscenes/YYYYMMDD_HHMMSS/results.json \
@@ -85,9 +133,9 @@ python3 /data1/wonhong/nuScenes_track_cache_tools/convert_official_results.py \
 Run only the first 100 frames of `scene-0240`:
 
 ```bash
-python3 /data1/wonhong/nuScenes_track_cache_tools/run_mctrack_single_scene.py \
-  --mctrack_root /data1/wonhong/third_party/MCTrack \
-  --base_json /data1/wonhong/third_party/MCTrack/data/base_version/nuscenes/largekernel/sweep_trainval.json \
+python3 run_mctrack_single_scene.py \
+  --mctrack_root third_party/MCTrack \
+  --base_json third_party/MCTrack/data/base_version/nuscenes/largekernel/sweep_trainval.json \
   --scene_id scene-0240 \
   --output_dir /data1/wonhong/nuScenes_track_cache/mctrack_results_scene0240_100frames \
   --max_frames 100
@@ -95,7 +143,7 @@ python3 /data1/wonhong/nuScenes_track_cache_tools/run_mctrack_single_scene.py \
 
 ## Important MCTrack Config Values
 
-`/data1/wonhong/third_party/MCTrack/config/nuscenes.yaml` should use:
+`third_party/MCTrack/config/nuscenes.yaml` should use:
 
 ```yaml
 SPLIT: "sweep_trainval"
@@ -128,4 +176,3 @@ gt_data[scene_id][frame_id][instance_token] = {
     "class_name": str,
 }
 ```
-

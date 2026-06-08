@@ -1,0 +1,9 @@
+[submodule "third_party/LargeKernel3D"]
+	path = third_party/LargeKernel3D
+	url = https://github.com/dvlab-research/LargeKernel3D.git
+[submodule "third_party/FocalsConv"]
+	path = third_party/FocalsConv
+	url = https://github.com/dvlab-research/FocalsConv.git
+[submodule "third_party/MCTrack"]
+	path = third_party/MCTrack
+	url = https://github.com/megvii-research/MCTrack.git
